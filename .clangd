@@ -1,0 +1,2 @@
+CompileFlags:
+  Add: -ISFML-2.6.1/include
