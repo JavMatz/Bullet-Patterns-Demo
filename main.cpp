@@ -6,6 +6,7 @@
 #define PI 3.14159265358979323846
 #define WINW 1366
 #define WINH 768
+#define MAXBULLETS 3000
 
 void addBullet(sf::VertexArray *v, Bullet *bul, size_t index) {
   // Get the quad contained in the vertex array
@@ -36,7 +37,8 @@ void addBullet(sf::VertexArray *v, Bullet *bul, size_t index) {
                    spr->getTextureRect().top + spr->getTextureRect().height);
 }
 
-void RedBulletPattern(sf::Texture tex, Bullet *bullets[], size_t numBullet, sf::VertexArray *vertices) {
+void RedBulletPattern(sf::Texture tex, Bullet *bullets[], size_t numBullet,
+                      sf::VertexArray *vertices) {
   float x_vel = cos((size_t)(numBullet % 180) / PI) * 0.15;
   float y_vel = sin((size_t)(numBullet % 180) / PI) * 0.15;
   float x_ini = WINW / 2.0 - 8;
@@ -50,12 +52,33 @@ void RedBulletPattern(sf::Texture tex, Bullet *bullets[], size_t numBullet, sf::
   addBullet(vertices, bul, numBullet);
 }
 
+void GreenBulletPattern(sf::Texture tex, Bullet *bullets[], size_t numBullet,
+                        sf::VertexArray *vertices) {
+  float x_ini = WINW / 2.0 - 32;
+  float y_ini = WINH / 2.0 - 32;
+
+  for (size_t i = 0; i < 45; i++) {
+    float y_vel = 20 * cos((size_t)numBullet / (PI / 2));
+    float x_vel = 20 * sin((size_t)numBullet / (PI / 2));
+    Bullet *bul = new Bullet(&tex, sf::Vector2f(x_vel * 0.01, y_vel * 0.01),
+                             sf::Vector2f(WINW / 2 - 32, WINH / 2 - 32),
+                             sf::IntRect(16, 64, 16, 16));
+
+    if (bullets[MAXBULLETS + numBullet] != NULL) {
+      delete (bullets[MAXBULLETS + numBullet]);
+      bullets[MAXBULLETS + numBullet] = NULL;
+    }
+
+    bullets[MAXBULLETS + numBullet] = bul;
+    addBullet(vertices, bul, MAXBULLETS + numBullet);
+  }
+}
+
 int main() {
   sf::RenderWindow window(sf::VideoMode(WINW, WINH), "Bullet Patter Demo");
 
   // Create an array to hold the bullets
-  const size_t maxBullets = 3000;
-  const size_t totalBullets = 16 * maxBullets;
+  const size_t totalBullets = 16 * MAXBULLETS;
 
   const double radius = 20;
 
@@ -130,7 +153,7 @@ int main() {
     }
 
     // RED BULLETS
-    if (numBullet == maxBullets) {
+    if (numBullet == MAXBULLETS) {
       numBullet = 0;
     }
 
@@ -139,7 +162,8 @@ int main() {
       bullets[numBullet] = NULL;
     }
 
-    RedBulletPattern(tex, bullets, numBullet, &vertices);
+    // RedBulletPattern(tex, bullets, numBullet, &vertices);
+    GreenBulletPattern(tex, bullets, numBullet, &vertices);
 
     // addBullet(&vertices, bul, numBullet);
     numBullet++;
