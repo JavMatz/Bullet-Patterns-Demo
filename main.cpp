@@ -1,12 +1,17 @@
 #include "Bullet.h"
 #include "SFML/Graphics/Vertex.hpp"
+#include "SFML/System/Vector2.hpp"
 #include <SFML/Graphics.hpp>
+#include <chrono>
 #include <cmath>
+#include <thread>
 
 #define PI 3.14159265358979323846
 #define WINW 1366
 #define WINH 768
 #define MAXBULLETS 3000
+#define RADIUS 20
+#define MAXFREQ 100
 
 void addBullet(sf::VertexArray *v, Bullet *bul, size_t index) {
   // Get the quad contained in the vertex array
@@ -37,65 +42,45 @@ void addBullet(sf::VertexArray *v, Bullet *bul, size_t index) {
                    spr->getTextureRect().top + spr->getTextureRect().height);
 }
 
-void RedBulletPattern(sf::Texture tex, Bullet *bullets[], size_t numBullet,
-                      sf::VertexArray *vertices) {
-  float x_vel = cos((size_t)(numBullet % 180) / PI) * 0.15;
-  float y_vel = sin((size_t)(numBullet % 180) / PI) * 0.15;
-  float x_ini = WINW / 2.0 - 8;
-  float y_ini = WINH / 2.0 - 8;
-
-  Bullet *bul =
-      new Bullet(&tex, sf::Vector2f(x_vel, y_vel), sf::Vector2f(x_ini, y_ini),
-                 sf::IntRect(0, 64, 16, 16));
-
-  bullets[numBullet] = bul;
-  addBullet(vertices, bul, numBullet);
+void cleanBullets(size_t totalBullets, Bullet *bullets[]) {
+  // CLEAN BULLETS IF THEY LEAVE SCREEN AREA
+  for (size_t i = 0; i < totalBullets; i++) {
+    if (bullets[i] != NULL) {
+      if (bullets[i]->getSprite()->getPosition().x > WINW ||
+          bullets[i]->getSprite()->getPosition().y > WINH ||
+          (bullets[i]->getSprite()->getPosition().y +
+           bullets[i]->getSprite()->getTextureRect().height) < 0 ||
+          (bullets[i]->getSprite()->getPosition().x +
+           bullets[i]->getSprite()->getTextureRect().width) < 0) {
+        delete (bullets[i]);
+        bullets[i] = NULL;
+      }
+    }
+  }
 }
 
-void GreenBulletPattern(sf::Texture tex, Bullet *bullets[], size_t numBullet,
-                        sf::VertexArray *vertices) {
-  float x_ini = WINW / 2.0 - 32;
-  float y_ini = WINH / 2.0 - 32;
+Bullet *SpawnBullet(sf::Vector2f speed, sf::Vector2f initial, sf::Texture tex,
+                    Bullet *bullets[], size_t numBullet,
+                    sf::VertexArray *vertices, sf::IntRect bulletSprite) {
 
-  for (size_t i = 0; i < 45; i++) {
-    float y_vel = 20 * cos((size_t)numBullet / (PI / 2));
-    float x_vel = 20 * sin((size_t)numBullet / (PI / 2));
-    Bullet *bul = new Bullet(&tex, sf::Vector2f(x_vel * 0.01, y_vel * 0.01),
-                             sf::Vector2f(WINW / 2 - 32, WINH / 2 - 32),
-                             sf::IntRect(16, 64, 16, 16));
+  Bullet *bul = new Bullet(&tex, sf::Vector2f(speed.x, speed.y),
+                           sf::Vector2f(initial.x, initial.y), bulletSprite);
 
-    if (bullets[MAXBULLETS + numBullet] != NULL) {
-      delete (bullets[MAXBULLETS + numBullet]);
-      bullets[MAXBULLETS + numBullet] = NULL;
-    }
-
-    bullets[MAXBULLETS + numBullet] = bul;
-    addBullet(vertices, bul, MAXBULLETS + numBullet);
-  }
+  return bul;
 }
 
 int main() {
   sf::RenderWindow window(sf::VideoMode(WINW, WINH), "Bullet Patter Demo");
+  window.setFramerateLimit(60);
 
   // Create an array to hold the bullets
   const size_t totalBullets = 16 * MAXBULLETS;
-
-  const double radius = 20;
+  const sf::Vector2f centerOfScreen =
+      sf::Vector2f(WINW / 2.0 - 8, WINH / 2.0 - 8);
 
   // Create variables for the bullets patterns
-  double counterTime = 0;
-  double counterTime2 = 0;
-  double counterTime3 = 0;
-
-  double counterWave2 = 0;
-  double counterWave3 = 0;
-
-  double bulletTime2 = 40;
-  double bulletTime3 = 100;
-
+  size_t counterTime = 0;
   size_t numBullet = 0;
-  size_t numBullet2 = 0;
-  size_t numBullet3 = 0;
 
   Bullet *bullets[totalBullets];
   for (size_t i = 0; i < totalBullets; i++) {
@@ -109,9 +94,14 @@ int main() {
   sf::Texture tex;
   tex.loadFromFile("data/sprites.png");
 
+  const sf::IntRect redSprite = sf::IntRect(0, 64, 16, 16);
+  const sf::IntRect greenSprite = sf::IntRect(16, 64, 16, 16);
+  const sf::IntRect aquaSprite = sf::IntRect(32, 64, 16, 16);
+  const sf::IntRect pinkSprite = sf::IntRect(48, 64, 16, 16);
+  const sf::IntRect orangeSprite = sf::IntRect(64, 64, 16, 16);
+
   sf::Clock clock;
   while (window.isOpen()) {
-
     sf::Event event;
     sf::Time timeElapsed = clock.restart();
 
@@ -153,35 +143,64 @@ int main() {
     }
 
     // RED BULLETS
-    if (numBullet == MAXBULLETS) {
+    if (numBullet == totalBullets) {
       numBullet = 0;
     }
 
+    // Delete previous bullet
     if (bullets[numBullet] != NULL) {
       delete (bullets[numBullet]);
       bullets[numBullet] = NULL;
     }
 
-    // RedBulletPattern(tex, bullets, numBullet, &vertices);
-    GreenBulletPattern(tex, bullets, numBullet, &vertices);
+    /* float x_vel = RADIUS * cos((size_t) (counterTime % 180) / PI) * 2.0e-2;
+    float y_vel = RADIUS * sin((size_t) (counterTime % 180) / PI) * 2.0e-2; */
+    // Speed
+    const size_t frequency = 90;
+    const size_t degree = 0;
 
-    // addBullet(&vertices, bul, numBullet);
+    float x_vel = 1 * sin((degree + 90) * PI/ 180);
+    float y_vel = 1 * cos((degree + 90) * PI/ 180);
+    float x_ini = centerOfScreen.x;
+    float y_ini = centerOfScreen.y;
+
+    if (counterTime % ( MAXFREQ - frequency ) == 0) {
+      Bullet *redBul =
+          SpawnBullet(sf::Vector2f(x_vel, y_vel), sf::Vector2f(x_ini, y_ini),
+                      tex, bullets, numBullet, &vertices, redSprite);
+
+      bullets[numBullet] = redBul;
+      addBullet(&vertices, redBul, numBullet);
+    }
+
+    // Green Bullets
+    /* if (counterTime % 16 == 0) {
+      float x_ini = WINW / 2.0 - 2;
+      float y_ini = WINH / 2.0 - 2;
+      float x_vel = RADIUS * sin((size_t)counterTime / (PI / 2)) * 0.01;
+      float y_vel = RADIUS * cos((size_t)counterTime / (PI / 2)) * 0.01;
+
+      Bullet *greenBull =
+          SpawnBullet(sf::Vector2f(x_vel, y_vel), sf::Vector2f(x_ini, y_ini),
+                      tex, bullets, numBullet, &vertices, greenSprite);
+
+      if (numBullet == MAXBULLETS) {
+        numBullet = 0;
+      }
+
+      if (bullets[numBullet] != NULL) {
+        delete (bullets[numBullet]);
+        bullets[numBullet] = NULL;
+      }
+
+      bullets[numBullet] = greenBull;
+      addBullet(&vertices, greenBull, numBullet);
+    } */
+
+    counterTime++;
     numBullet++;
 
-    // CLEAN BULLETS IF THEY LEAVE SCREEN AREA
-    for (size_t i = 0; i < totalBullets; i++) {
-      if (bullets[i] != NULL) {
-        if (bullets[i]->getSprite()->getPosition().x > WINW ||
-            bullets[i]->getSprite()->getPosition().y > WINH ||
-            (bullets[i]->getSprite()->getPosition().y +
-             bullets[i]->getSprite()->getTextureRect().height) < 0 ||
-            (bullets[i]->getSprite()->getPosition().x +
-             bullets[i]->getSprite()->getTextureRect().width) < 0) {
-          delete (bullets[i]);
-          bullets[i] = NULL;
-        }
-      }
-    }
+    cleanBullets(totalBullets, bullets);
 
     window.clear();
 
@@ -198,6 +217,7 @@ int main() {
     counterTime = counterTime + timeElapsed.asSeconds();
   }
 
+  // Clean bullets
   for (size_t i = 0; i < totalBullets; i++) {
     if (bullets[i] != NULL) {
       delete (bullets[i]);
