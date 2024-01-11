@@ -1,10 +1,5 @@
 #include "Bullet.h"
-#include "SFML/Graphics/Vertex.hpp"
-#include "SFML/System/Vector2.hpp"
 #include <SFML/Graphics.hpp>
-#include <chrono>
-#include <cmath>
-#include <thread>
 
 #define PI 3.14159265358979323846
 #define WINW 1366
@@ -61,26 +56,42 @@ void cleanBulletsOffWindow(size_t totalBullets, Bullet *bullets[]) {
 
 void SpreadPattern(size_t frequency, size_t counterTime,
                    sf::VertexArray *vertices, Bullet *bullets[],
-                   sf::Texture *tex, sf::IntRect sprite) {
+                   sf::Texture *tex, sf::IntRect sprite, size_t numBullet) {
   // Spread pattern
   if (counterTime % (MAXFREQ - frequency) == 0) {
     Bullet *spr1 = new Bullet(tex, sf::Vector2f(1.0, 1.0),
                               sf::Vector2f(WINW / 2.0, WINH / 2.0), sprite);
 
-    bullets[1] = spr1;
-    addBullet(vertices, spr1, 1);
+    bullets[0 + numBullet * 3] = spr1;
+    addBullet(vertices, spr1, 0 + numBullet * 3);
 
     Bullet *spr2 = new Bullet(tex, sf::Vector2f(0.0, 1.0),
                               sf::Vector2f(WINW / 2.0, WINH / 2.0), sprite);
 
-    bullets[2] = spr2;
-    addBullet(vertices, spr2, 2);
+    bullets[1 + numBullet * 3] = spr2;
+    addBullet(vertices, spr2, 1 + numBullet * 3);
 
     Bullet *spr3 = new Bullet(tex, sf::Vector2f(-1.0, 1.0),
                               sf::Vector2f(WINW / 2.0, WINH / 2.0), sprite);
 
-    bullets[3] = spr3;
-    addBullet(vertices, spr3, 3);
+    bullets[2 + numBullet * 3] = spr3;
+    addBullet(vertices, spr3, 2 + numBullet * 3);
+  }
+}
+
+void CourtainPattern(size_t frequency, size_t counterTime,
+                     sf::VertexArray *vertices, Bullet *bullets[],
+                     sf::Texture *tex, sf::IntRect sprite, size_t numBullet) {
+
+  const size_t courtainSize = 20;
+  if (counterTime % (MAXFREQ - frequency) == 0) {
+    for (size_t i = 1; i <= courtainSize; i++) {
+      Bullet *spr1 = new Bullet(tex, sf::Vector2f(0.0, 1.0),
+                                sf::Vector2f((float) i * WINW / courtainSize , WINH / 6.0), sprite);
+
+      bullets[i + numBullet * 3] = spr1;
+      addBullet(vertices, spr1, i + numBullet * 3);
+    }
   }
 }
 
@@ -162,53 +173,16 @@ int main() {
       numBullet = 0;
     }
 
-    // Delete previous bullet
-
-    /* if (bullets[numBullet] != NULL) {
-      delete (bullets[numBullet]);
-      bullets[numBullet] = NULL;
-    } */
-
-    // Speed
-    const size_t frequency = 80;
+    // PARAMETERS
+    const size_t frequency = 90;
     const size_t degree = 90;
 
     // SpreadPattern(frequency, counterTime, &vertices, bullets, &tex,
-    // redSprite);
+    // redSprite,
+    //               numBullet);
 
-    if (counterTime % (MAXFREQ - frequency) == 0) {
-      Bullet *spr1 =
-        new Bullet(&tex, sf::Vector2f(1.0e-1, 1.0e-1),
-            sf::Vector2f(WINW / 2.0, WINH / 2.0), redSprite);
-
-      bullets[0+numBullet*3] = spr1;
-      addBullet(&vertices, spr1, 0+numBullet*3);
-
-      Bullet *spr2 =
-        new Bullet(&tex, sf::Vector2f(0.0, 1.0e-1),
-            sf::Vector2f(WINW / 2.0, WINH / 2.0), redSprite);
-
-      bullets[1+numBullet*3] = spr2;
-      addBullet(&vertices, spr2, 1+numBullet*3);
-
-      Bullet *spr3 =
-        new Bullet(&tex, sf::Vector2f(-1.0e-1, 1.0e-1),
-            sf::Vector2f(WINW / 2.0, WINH / 2.0), redSprite);
-
-      bullets[2+numBullet*3] = spr3;
-      addBullet(&vertices, spr3, 2+numBullet*3);
-    }
-
-    /* float x_ini = centerOfScreen.x;
-    float y_ini = centerOfScreen.y;
-
-    if (counterTime % (MAXFREQ - frequency) == 0) {
-      Bullet *redBullet = new Bullet(&tex, sf::Vector2f(x_vel, y_vel),
-                                     sf::Vector2f(x_ini, y_ini), redSprite);
-
-      bullets[numBullet] = redBullet;
-      addBullet(&vertices, redBullet, numBullet);
-    } */
+    CourtainPattern(frequency, counterTime, &vertices, bullets, &tex,
+                    orangeSprite, numBullet);
 
     counterTime++;
     numBullet++;
@@ -230,7 +204,7 @@ int main() {
     counterTime = counterTime + timeElapsed.asSeconds();
   }
 
-  // Clean bullets
+  // Clean all bullets
   for (size_t i = 0; i < totalBullets; i++) {
     if (bullets[i] != NULL) {
       delete (bullets[i]);
