@@ -1,5 +1,7 @@
 #include "Bullet.h"
+#include "SFML/System/Vector2.hpp"
 #include <SFML/Graphics.hpp>
+#include <cmath>
 
 #define PI 3.14159265358979323846
 #define WINW 1366
@@ -57,25 +59,17 @@ void cleanBulletsOffWindow(size_t totalBullets, Bullet *bullets[]) {
 void SpreadPattern(size_t frequency, size_t counterTime,
                    sf::VertexArray *vertices, Bullet *bullets[],
                    sf::Texture *tex, sf::IntRect sprite, size_t numBullet) {
-  // Spread pattern
+  const size_t spreadNumber = 6;
   if (counterTime % (MAXFREQ - frequency) == 0) {
-    Bullet *spr1 = new Bullet(tex, sf::Vector2f(1.0, 1.0),
-                              sf::Vector2f(WINW / 2.0, WINH / 2.0), sprite);
+    for (size_t i = 1; i < spreadNumber; i++) {
+      Bullet *spr1 = new Bullet(
+          tex,
+          sf::Vector2f(cos(i * PI / spreadNumber), sin(i * PI / spreadNumber)),
+          sf::Vector2f(WINW / 2.0, WINH / 2.0), sprite);
 
-    bullets[0 + numBullet * 3] = spr1;
-    addBullet(vertices, spr1, 0 + numBullet * 3);
-
-    Bullet *spr2 = new Bullet(tex, sf::Vector2f(0.0, 1.0),
-                              sf::Vector2f(WINW / 2.0, WINH / 2.0), sprite);
-
-    bullets[1 + numBullet * 3] = spr2;
-    addBullet(vertices, spr2, 1 + numBullet * 3);
-
-    Bullet *spr3 = new Bullet(tex, sf::Vector2f(-1.0, 1.0),
-                              sf::Vector2f(WINW / 2.0, WINH / 2.0), sprite);
-
-    bullets[2 + numBullet * 3] = spr3;
-    addBullet(vertices, spr3, 2 + numBullet * 3);
+      bullets[i + numBullet * spreadNumber] = spr1;
+      addBullet(vertices, spr1, i + numBullet * spreadNumber);
+    }
   }
 }
 
@@ -83,16 +77,71 @@ void CourtainPattern(size_t frequency, size_t counterTime,
                      sf::VertexArray *vertices, Bullet *bullets[],
                      sf::Texture *tex, sf::IntRect sprite, size_t numBullet) {
 
-  const size_t courtainSize = 20;
+  const size_t courtainSize = 100;
   if (counterTime % (MAXFREQ - frequency) == 0) {
     for (size_t i = 1; i <= courtainSize; i++) {
-      Bullet *spr1 = new Bullet(tex, sf::Vector2f(0.0, 1.0),
-                                sf::Vector2f((float) i * WINW / courtainSize , WINH / 6.0), sprite);
+      Bullet *spr1 = new Bullet(
+          tex, sf::Vector2f(0.0, 1.0),
+          sf::Vector2f((float)i * WINW / courtainSize, WINH / 6.0), sprite);
 
-      bullets[i + numBullet * 3] = spr1;
-      addBullet(vertices, spr1, i + numBullet * 3);
+      bullets[i + numBullet * courtainSize] = spr1;
+      addBullet(vertices, spr1, i + numBullet * courtainSize);
     }
   }
+}
+
+void Circular1(size_t frequency, size_t counterTime, sf::VertexArray *vertices,
+               Bullet *bullets[], sf::Texture *tex, sf::IntRect sprite,
+               size_t numBullet) {
+  
+  float x = RADIUS * cos((size_t)(numBullet % 180) / PI);
+  float y = RADIUS * sin((size_t)(numBullet % 180) / PI);
+  Bullet *bul = new Bullet(tex, sf::Vector2f(x * 0.01, y * 0.01),
+                           sf::Vector2f(WINW / 2.0 - 8, WINH / 2.0 - 8),
+                           sprite);
+  bullets[numBullet] = bul;
+  addBullet(vertices, bul, numBullet);
+}
+
+void Circular2(size_t frequency, size_t counterTime, sf::VertexArray *vertices,
+               Bullet *bullets[], sf::Texture *tex, sf::IntRect sprite,
+               size_t numBullet) {
+  
+  float x = RADIUS * cos(numBullet / (PI/2));
+  float y = RADIUS * sin(numBullet / (PI/2));
+  Bullet *bul = new Bullet(tex, sf::Vector2f(x * 0.01, y * 0.01),
+                           sf::Vector2f(WINW / 2.0 - 8, WINH / 2.0 - 8),
+                           sprite);
+  bullets[numBullet] = bul;
+  addBullet(vertices, bul, numBullet);
+}
+
+void Circular3(size_t frequency, size_t counterTime, sf::VertexArray *vertices,
+               Bullet *bullets[], sf::Texture *tex, sf::IntRect sprite,
+               size_t numBullet) {
+  
+  const size_t m = 15;
+  float x = RADIUS * cos((size_t)(numBullet % m) / PI);
+  float y = RADIUS * sin((size_t)(numBullet % m) / PI);
+  Bullet *bul = new Bullet(tex, sf::Vector2f(x * 0.01, y * 0.01),
+                           sf::Vector2f(WINW / 2.0 - 8, WINH / 2.0 - 8),
+                           sprite);
+  bullets[numBullet] = bul;
+  addBullet(vertices, bul, numBullet);
+}
+
+
+void Random1(size_t frequency, size_t counterTime, sf::VertexArray *vertices,
+               Bullet *bullets[], sf::Texture *tex, sf::IntRect sprite,
+               size_t numBullet) {
+  
+  float x = RADIUS * cos((size_t) rand() % 180 / PI);
+  float y = RADIUS * sin((size_t) rand() % 180 / PI);
+  Bullet *bul = new Bullet(tex, sf::Vector2f(x * 0.01, y * 0.01),
+                           sf::Vector2f(WINW / 2.0 - 8, WINH / 2.0 - 8),
+                           sprite);
+  bullets[numBullet] = bul;
+  addBullet(vertices, bul, numBullet);
 }
 
 int main() {
@@ -175,14 +224,24 @@ int main() {
 
     // PARAMETERS
     const size_t frequency = 90;
-    const size_t degree = 90;
 
-    // SpreadPattern(frequency, counterTime, &vertices, bullets, &tex,
-    // redSprite,
-    //               numBullet);
+    /* SpreadPattern(frequency, counterTime, &vertices, bullets, &tex,
+       redSprite, numBullet); */
 
-    CourtainPattern(frequency, counterTime, &vertices, bullets, &tex,
-                    orangeSprite, numBullet);
+    /* CourtainPattern(frequency, counterTime, &vertices, bullets, &tex,
+                    orangeSprite, numBullet); */
+
+    /* Circular1(frequency, counterTime, &vertices, bullets, &tex,
+                    pinkSprite, numBullet); */
+
+    /* Circular2(frequency, counterTime, &vertices, bullets, &tex,
+                    pinkSprite, numBullet); */
+
+    /* Circular3(frequency, counterTime, &vertices, bullets, &tex,
+                    pinkSprite, numBullet); */
+
+    /* Random1(frequency, counterTime, &vertices, bullets, &tex,
+                    greenSprite, numBullet); */
 
     counterTime++;
     numBullet++;
